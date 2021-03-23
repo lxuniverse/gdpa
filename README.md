@@ -10,6 +10,18 @@ PyTorch >= 0.4.0
 ## Quick Start
 Download the data from:
 https://github.com/tongwu2020/phattacks for VGGFace
+
 or
+
 http://www.image-net.org/ for Imagenet
 
+## Quick Start
+
+1. Train GDPA for patch attack:
+```
+python 
+```
+2. Train a robust model with GDPA-AT
+```
+python 
+```
