@@ -140,7 +140,7 @@ def get_para():
     parser.add_argument('--beta', type=int, default=3000)
     args = parser.parse_args()
     # fixed parameters
-    epochs = 30
+    epochs = 50
     lr_gen = 0.0005
     alpha = args.alpha
     patch_size = args.size
