@@ -18,8 +18,8 @@ def scale_pattern(mask, p_scale=10000):
     return mask_s
 
 
-def scale_theta(mask, theta_div):
-    mask_s = torch.tanh(mask / theta_div) * 0.8
+def scale_theta(mask, theta_div, theta_bound):
+    mask_s = torch.tanh(mask / theta_div) * theta_bound
     return mask_s
 
 
@@ -28,9 +28,10 @@ def move_m_p(aff_theta, pattern_s, alpha=1):
     device = 'cuda'
     image_with_patch = torch.zeros(bs, 3, 224, 224, device=device)
     mask_with_patch = torch.zeros(bs, 1, 224, 224, device=device)
-    end_idx = 100 + pattern_s.size()[2]
-    image_with_patch[:, :, 100:end_idx, 100:end_idx] = pattern_s
-    mask_with_patch[:, :, 100:end_idx, 100:end_idx] = alpha
+    start = 111 - pattern_s.size()[2] // 2
+    end = start + pattern_s.size()[2]
+    image_with_patch[:, :, start:end, start:end] = pattern_s
+    mask_with_patch[:, :, start:end, start:end] = alpha
 
     rot_theta = torch.tensor([[1.0, 0.0], [0.0, 1.0]]).unsqueeze(0).to(device).repeat(bs, 1, 1)
     theta_batch = torch.cat((rot_theta, aff_theta.unsqueeze(2)), 2)
@@ -40,10 +41,10 @@ def move_m_p(aff_theta, pattern_s, alpha=1):
     return mask_s, pattern_s
 
 
-def perturb_image(inputs, mp_generator, devide_theta, alpha=1, p_scale=10000):
+def perturb_image(inputs, mp_generator, devide_theta, theta_bound, alpha=1, p_scale=10000):
     mask_generated, pattern_generated, aff_theta = mp_generator(inputs)
 
-    aff_theta = scale_theta(aff_theta, devide_theta)
+    aff_theta = scale_theta(aff_theta, devide_theta, theta_bound)
     pattern_s = scale_pattern(pattern_generated, p_scale=p_scale)
 
     mask_s, pattern_s = move_m_p(aff_theta, pattern_s, alpha=alpha)
@@ -55,14 +56,14 @@ def perturb_image(inputs, mp_generator, devide_theta, alpha=1, p_scale=10000):
 
 def train_gen_batch(inputs, targets, model, mp_generator,
                     optimizer_gen, criterion,
-                    loss_l_gen, devide_theta, normalize_func, alpha=1, p_scale=10000):
+                    loss_l_gen, devide_theta, normalize_func, theta_bound, alpha=1, p_scale=10000):
     mp_generator.train()
     model.eval()
 
     device = 'cuda'
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_gen.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, alpha=alpha, p_scale=p_scale)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, alpha=alpha, p_scale=p_scale)
     outputs = model(normalize_func(inputs))
     loss = -criterion(outputs, targets)
     loss.backward()
@@ -73,21 +74,21 @@ def train_gen_batch(inputs, targets, model, mp_generator,
 
 
 def test_gen_batch(inputs, targets, model, mp_generator,
-                   optimizer_gen, devide_theta, normalize_func, alpha=1, p_scale=10000):
+                   optimizer_gen, devide_theta, normalize_func, theta_bound, alpha=1, p_scale=10000):
     mp_generator.eval()
     model.eval()
 
     device = 'cuda'
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_gen.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, alpha=alpha, p_scale=p_scale)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, alpha=alpha, p_scale=p_scale)
     outputs = model(normalize_func(inputs))
     _, predicted = outputs.max(1)
     return (~predicted.eq(targets)).sum().item(), targets.size(0), inputs
 
 
 def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, scheduler, criterion,
-          epochs, devide_theta, alpha, normalize_func, writer):
+          epochs, devide_theta, alpha, normalize_func, writer, theta_bound):
     for epoch in range(epochs):
         start_time = time.time()
         print('epoch: {}'.format(epoch))
@@ -99,7 +100,7 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
             correct_batch, total_batch, final_ims_gen = train_gen_batch(inputs, targets, model,
                                                                         mp_generator,
                                                                         optimizer_gen, criterion,
-                                                                        loss_l_gen, devide_theta, normalize_func, alpha=alpha,
+                                                                        loss_l_gen, devide_theta, normalize_func, theta_bound, alpha=alpha,
                                                                         p_scale=10000)
             correct_gen += correct_batch
             total_gen += total_batch
@@ -116,7 +117,7 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
         for batch_idx, (inputs, targets) in enumerate(tqdm(dataloader_val)):
             correct_batch, total_batch, final_ims_gen = test_gen_batch(inputs, targets, model,
                                                                        mp_generator,
-                                                                       optimizer_gen, devide_theta, normalize_func, alpha=alpha,
+                                                                       optimizer_gen, devide_theta, normalize_func, theta_bound, alpha=alpha,
                                                                        p_scale=10000)
             correct_gen2 += correct_batch
             total_gen2 += total_batch
@@ -133,20 +134,20 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
 def get_para():
     # input parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp', type=str, default='gdpa')
+    parser.add_argument('--exp', type=str, default='gdpa_beta2')
     parser.add_argument('--size', type=int, default=32)
     parser.add_argument('--alpha', type=float, default=1)
+    parser.add_argument('--beta', type=int, default=3000)
     args = parser.parse_args()
     # fixed parameters
-    epochs = 200
+    epochs = 30
     lr_gen = 0.0005
-    beta = 3000
     alpha = args.alpha
     patch_size = args.size
-    dataset = 'imagenet'
+    dataset = 'vggface'
     imagenet_model = 'resnet50'
     # para
-    para = {'exp': args.exp, 'device': 'cuda', 'beta': beta, 'lr_gen': lr_gen,
+    para = {'exp': args.exp, 'device': 'cuda', 'beta': args.beta, 'lr_gen': lr_gen,
             'epochs': epochs, 'alpha': alpha, 'patch_size': patch_size, 'dataset': dataset, 'imagenet_model': imagenet_model}
     print(para)
     return para
@@ -183,9 +184,11 @@ def main():
     ], lr=0.1, betas=(0.5, 0.9))
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer_gen, step_size=50, gamma=0.2)
     criterion = torch.nn.CrossEntropyLoss()
+    # bound for theta
+    theta_bound = 1 - (para['patch_size'] / 224.0)
     # train and test
     train(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, scheduler,
-          criterion, para['epochs'], para['beta'], para['alpha'], normalize_func, writer)
+          criterion, para['epochs'], para['beta'], para['alpha'], normalize_func, writer, theta_bound)
 
 
 if __name__ == '__main__':
