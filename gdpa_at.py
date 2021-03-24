@@ -86,11 +86,10 @@ def main():
     lr_gen = 0.0001
     lr_clf = 0.0001
     beta = 3000
-    glass_iters = 100
     save_freq = 50
     size = 70
     para = {'exp': 'exp_at', 'device': 'cuda', 'lr_gen': lr_gen,
-            'lr_clf': lr_clf, 'epochs': epochs, 'glass_iters': glass_iters, 'size': size}
+            'lr_clf': lr_clf, 'epochs': epochs, 'size': size}
     writer, base_dir = get_log_writer(para)
 
     dataloader, dataloader_val = load_vggface_unnormalized(32, args.data_path)
