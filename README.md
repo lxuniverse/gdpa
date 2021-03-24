@@ -22,7 +22,9 @@ http://www.image-net.org/
 
 1. Dynamic patch attack with GDPA:
 ```
-python gdpa.py --dataset [imagenet|vggface] --data_path [FOLDER_NAME] --vgg_model_path [MODEL_PATH]
+python gdpa.py --dataset [imagenet|vggface] --data_path [FOLDER_NAME] 
+
+If on VGGFace, please add --vgg_model_path [MODEL_PATH]
 
 optional arguments:
   --patch_size            size of adversarial patch
