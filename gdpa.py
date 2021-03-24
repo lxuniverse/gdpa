@@ -125,9 +125,9 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
             correct_gen2 += correct_batch
             total_gen2 += total_batch
         asr = correct_gen2 / total_gen2
-        writer.add_scalar('train_gen2/asr', asr, epoch)
+        writer.add_scalar('test_gen/asr', asr, epoch)
         final_ims_gen = torchvision.utils.make_grid(final_ims_gen)
-        writer.add_image('final_im_gen2/{}'.format(epoch), final_ims_gen, epoch)
+        writer.add_image('final_im_test/{}'.format(epoch), final_ims_gen, epoch)
         # scheduler
         scheduler.step()
         end_time = time.time()
