@@ -46,7 +46,7 @@ def train_clf_batch(inputs, targets, model, mp_generator,
     return (~predicted.eq(targets)).sum().item(), targets.size(0), inputs
 
 
-def at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
+def gdpa_at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
        devide_theta, writer, save_freq, size, theta_bound, device):
     for epoch in range(epochs):
         start_time = time.time()
@@ -140,7 +140,7 @@ def main():
     criterion = torch.nn.CrossEntropyLoss()
 
     theta_bound = 1 - (args.patch_size / 224.0)
-    at(dataloader, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
+    gdpa_at(dataloader, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
        criterion, args.epochs, args.beta, writer, args.save_freq, args.patch_size, theta_bound, args.device)
 
 
