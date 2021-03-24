@@ -134,21 +134,20 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
 def get_para():
     # input parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp', type=str, default='gdpa_beta2')
+    parser.add_argument('--exp', type=str, default='gdpa')
     parser.add_argument('--size', type=int, default=32)
     parser.add_argument('--alpha', type=float, default=1)
     parser.add_argument('--beta', type=int, default=3000)
+    parser.add_argument('--dataset', type=str, default='vggface')
     args = parser.parse_args()
     # fixed parameters
     epochs = 50
     lr_gen = 0.0005
-    alpha = args.alpha
-    patch_size = args.size
-    dataset = 'vggface'
-    imagenet_model = 'resnet50'
+    imagenet_model = 'vgg19'
     # para
     para = {'exp': args.exp, 'device': 'cuda', 'beta': args.beta, 'lr_gen': lr_gen,
-            'epochs': epochs, 'alpha': alpha, 'patch_size': patch_size, 'dataset': dataset, 'imagenet_model': imagenet_model}
+            'epochs': epochs, 'alpha': args.alpha, 'patch_size': args.size, 'dataset': args.dataset,
+            'imagenet_model': imagenet_model}
     print(para)
     return para
 

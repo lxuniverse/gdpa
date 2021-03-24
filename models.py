@@ -205,7 +205,7 @@ def init_weights(net, init_type='normal', init_gain=0.02):
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
         elif classname.find(
-                'BatchNorm2d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+                'BatchNorm2d') != -1:
             init.normal_(m.weight.data, 1.0, init_gain)
             init.constant_(m.bias.data, 0.0)
 
@@ -258,7 +258,6 @@ class VGG_16_vggface(nn.Module):
                         block += 1
                     self_layer.weight.data[...] = torch.tensor(layer.weight).view_as(self_layer.weight)[...]
                     self_layer.bias.data[...] = torch.tensor(layer.bias).view_as(self_layer.bias)[...]
-                    # only load convolutional layers, learn fc layers by our own examples
 
     def forward(self, x):
         x = F.relu(self.conv_1_1(x))
