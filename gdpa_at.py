@@ -3,20 +3,37 @@ import torchvision
 import time
 from tqdm import tqdm
 import numpy as np
-from data import load_vggface_unnormalized
+from data import load_vggface_unnormalized, normalize_vggface
 from models import load_model_vggface, load_generator
 from utils import get_log_writer
-from gdpa import perturb_image, normalize_vggface, train_gen_batch
+from gdpa import perturb_image
 import argparse
+
+
+def train_gen_batch(inputs, targets, model, mp_generator,
+                    optimizer_gen, criterion,
+                    loss_l_gen, devide_theta, device, alpha=1, p_scale=10000):
+    mp_generator.train()
+    model.eval()
+
+    inputs, targets = inputs.to(device), targets.to(device)
+    optimizer_gen.zero_grad()
+    inputs = perturb_image(inputs, mp_generator, devide_theta, device, alpha=alpha, p_scale=p_scale)
+    outputs = model(normalize_vggface(inputs[:, [2, 1, 0], :, :]))
+    loss = -criterion(outputs, targets)
+    loss.backward()
+    optimizer_gen.step()
+    loss_l_gen.append(loss.cpu().detach().numpy())
+    _, predicted = outputs.max(1)
+    return (~predicted.eq(targets)).sum().item(), targets.size(0), inputs
 
 
 def train_clf_batch(inputs, targets, model, mp_generator,
                     optimizer_clf, criterion,
-                    loss_l_clf, devide_theta):
+                    loss_l_clf, devide_theta, device):
     mp_generator.eval()
     model.train()
 
-    device = 'cuda'
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_clf.zero_grad()
     inputs = perturb_image(inputs, mp_generator, devide_theta)
@@ -30,7 +47,7 @@ def train_clf_batch(inputs, targets, model, mp_generator,
 
 
 def at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
-       devide_theta, writer, save_freq, size):
+       devide_theta, writer, save_freq, size, device):
     for epoch in range(epochs):
         start_time = time.time()
         print('epoch: {}'.format(epoch))
@@ -46,13 +63,14 @@ def at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler,
             correct_batch, total_batch, final_ims_gen = train_gen_batch(inputs, targets, model,
                                                                         mp_generator,
                                                                         optimizer_gen, criterion,
-                                                                        loss_l_gen, devide_theta)
+                                                                        loss_l_gen, devide_theta, device)
             correct_gen += correct_batch
             total_gen += total_batch
+
             correct_batch, total_batch, final_ims_clf = train_clf_batch(inputs, targets, model,
                                                                         mp_generator,
                                                                         optimizer_clf, criterion,
-                                                                        loss_l_clf, devide_theta)
+                                                                        loss_l_clf, devide_theta, device)
             correct_clf += correct_batch
             total_clf += total_batch
 
@@ -91,23 +109,24 @@ def get_args():
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--vgg_model_path', type=str,
                         default='/home/xli62/uap/phattacks/glass/donemodel/new_ori_model.pt')
+    parser.add_argument('--device', type=str, default='cuda')
     args = parser.parse_args()
     return args
 
 
 def main():
     args = get_args()
-    para = {'exp': 'exp_at', 'device': 'cuda', 'lr_gen': args.lr_gen,
+    para = {'exp': 'exp_at', 'lr_gen': args.lr_gen,
             'lr_clf': args.lr_clf, 'epochs': args.epochs, 'size': args.patch_size}
     writer, base_dir = get_log_writer(para)
 
     dataloader, dataloader_val = load_vggface_unnormalized(args.batch_size, args.data_path)
 
     model_train = load_model_vggface(args.model_path)
-    model_train = model_train.to(para['device'])
+    model_train = model_train.to(args.device)
     model_train.eval()
 
-    mp_generator = load_generator(args.patch_size, 3, 1, 64, 'resnet_6blocks').to(para['device'])
+    mp_generator = load_generator(args.patch_size, 3, 1, 64, 'resnet_6blocks').to(args.device)
 
     optimizer_gen = torch.optim.Adam([
         {'params': mp_generator.parameters(), 'lr': args.lr_gen}
@@ -121,7 +140,7 @@ def main():
     criterion = torch.nn.CrossEntropyLoss()
 
     at(dataloader, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
-       criterion, args.epochs, args.beta, writer, args.save_freq, args.size)
+       criterion, args.epochs, args.beta, writer, args.save_freq, args.size, args.device)
 
 
 if __name__ == '__main__':

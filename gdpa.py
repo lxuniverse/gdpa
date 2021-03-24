@@ -24,9 +24,8 @@ def scale_theta(mask, theta_div, theta_bound):
     return mask_s
 
 
-def move_m_p(aff_theta, pattern_s, alpha=1):
+def move_m_p(aff_theta, pattern_s, device, alpha=1):
     bs = pattern_s.size()[0]
-    device = 'cuda'
     image_with_patch = torch.zeros(bs, 3, 224, 224, device=device)
     mask_with_patch = torch.zeros(bs, 1, 224, 224, device=device)
     start = 111 - pattern_s.size()[2] // 2
@@ -42,13 +41,13 @@ def move_m_p(aff_theta, pattern_s, alpha=1):
     return mask_s, pattern_s
 
 
-def perturb_image(inputs, mp_generator, devide_theta, theta_bound, alpha=1, p_scale=10000):
+def perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=1, p_scale=10000):
     mask_generated, pattern_generated, aff_theta = mp_generator(inputs)
 
     aff_theta = scale_theta(aff_theta, devide_theta, theta_bound)
     pattern_s = scale_pattern(pattern_generated, p_scale=p_scale)
 
-    mask_s, pattern_s = move_m_p(aff_theta, pattern_s, alpha=alpha)
+    mask_s, pattern_s = move_m_p(aff_theta, pattern_s, device, alpha=alpha)
 
     inputs = inputs * (1 - mask_s) + pattern_s * mask_s
     inputs = inputs.clamp(0, 1)
@@ -57,14 +56,13 @@ def perturb_image(inputs, mp_generator, devide_theta, theta_bound, alpha=1, p_sc
 
 def train_gen_batch(inputs, targets, model, mp_generator,
                     optimizer_gen, criterion,
-                    loss_l_gen, devide_theta, normalize_func, theta_bound, alpha=1, p_scale=10000):
+                    loss_l_gen, devide_theta, normalize_func, theta_bound, device, alpha=1, p_scale=10000):
     mp_generator.train()
     model.eval()
 
-    device = 'cuda'
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_gen.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, alpha=alpha, p_scale=p_scale)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=alpha, p_scale=p_scale)
     outputs = model(normalize_func(inputs))
     loss = -criterion(outputs, targets)
     loss.backward()
@@ -75,21 +73,20 @@ def train_gen_batch(inputs, targets, model, mp_generator,
 
 
 def test_gen_batch(inputs, targets, model, mp_generator,
-                   optimizer_gen, devide_theta, normalize_func, theta_bound, alpha=1, p_scale=10000):
+                   optimizer_gen, devide_theta, normalize_func, theta_bound, device, alpha=1, p_scale=10000):
     mp_generator.eval()
     model.eval()
 
-    device = 'cuda'
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_gen.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, alpha=alpha, p_scale=p_scale)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=alpha, p_scale=p_scale)
     outputs = model(normalize_func(inputs))
     _, predicted = outputs.max(1)
     return (~predicted.eq(targets)).sum().item(), targets.size(0), inputs
 
 
 def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, scheduler, criterion,
-          epochs, devide_theta, alpha, normalize_func, writer, theta_bound):
+          epochs, devide_theta, alpha, normalize_func, writer, theta_bound, device):
     for epoch in range(epochs):
         start_time = time.time()
         print('epoch: {}'.format(epoch))
@@ -102,7 +99,7 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
                                                                         mp_generator,
                                                                         optimizer_gen, criterion,
                                                                         loss_l_gen, devide_theta, normalize_func,
-                                                                        theta_bound, alpha=alpha,
+                                                                        theta_bound, device, alpha=alpha,
                                                                         p_scale=10000)
             correct_gen += correct_batch
             total_gen += total_batch
@@ -120,7 +117,7 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
             correct_batch, total_batch, final_ims_gen = test_gen_batch(inputs, targets, model,
                                                                        mp_generator,
                                                                        optimizer_gen, devide_theta, normalize_func,
-                                                                       theta_bound, alpha=alpha,
+                                                                       theta_bound, device, alpha=alpha,
                                                                        p_scale=10000)
             correct_gen2 += correct_batch
             total_gen2 += total_batch
@@ -148,13 +145,14 @@ def get_args():
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--lr_gen', type=float, default=0.0005)
     parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--device', type=str, default='cuda')
     args = parser.parse_args()
     return args
 
 
 def main():
     args = get_args()
-    para = {'exp': args.exp, 'device': 'cuda', 'beta': args.beta, 'lr_gen': args.lr_gen,
+    para = {'exp': args.exp, 'beta': args.beta, 'lr_gen': args.lr_gen,
             'epochs': args.epochs, 'alpha': args.alpha, 'patch_size': args.patch_size, 'dataset': args.dataset}
     writer, base_dir = get_log_writer(para)
     # data
@@ -169,10 +167,10 @@ def main():
         model_train = load_model_vggface(args.vgg_model_path)
     elif para['dataset'] == 'imagenet':
         model_train = models.vgg19(pretrained=True)
-    model_train = model_train.to(para['device'])
+    model_train = model_train.to(args.device)
     model_train.eval()
     # gen model
-    mp_generator = load_generator(para['patch_size'], 3, 1, 64, 'resnet_6blocks').to(para['device'])
+    mp_generator = load_generator(para['patch_size'], 3, 1, 64, 'resnet_6blocks').to(args.device)
     # training setting
     optimizer_gen = torch.optim.Adam([
         {'params': mp_generator.parameters(), 'lr': para['lr_gen']}
@@ -183,7 +181,7 @@ def main():
     theta_bound = 1 - (para['patch_size'] / 224.0)
     # train and test
     train(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, scheduler,
-          criterion, para['epochs'], para['beta'], para['alpha'], normalize_func, writer, theta_bound)
+          criterion, para['epochs'], para['beta'], para['alpha'], normalize_func, writer, theta_bound, args.device)
 
 
 if __name__ == '__main__':
