@@ -27,9 +27,9 @@ def move_m_p(aff_theta, pattern_s, device, alpha=1):
     return mask_s, pattern_s
 
 
-def perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=1, p_scale=10000):
+def perturb_image(inputs, mp_generator, devide_theta, device, alpha=1, p_scale=10000):
     mask_generated, pattern_generated, aff_theta = mp_generator(inputs)
-    aff_theta = scale_theta(aff_theta, devide_theta, theta_bound)
+    aff_theta = scale_theta(aff_theta, devide_theta)
     pattern_s = scale_pattern(pattern_generated, p_scale=p_scale)
     mask_s, pattern_s = move_m_p(aff_theta, pattern_s, device, alpha=alpha)
     inputs = inputs * (1 - mask_s) + pattern_s * mask_s
@@ -38,13 +38,13 @@ def perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha
 
 
 def train_gen_batch(inputs, targets, model, mp_generator, optimizer_gen, criterion,
-                    loss_l_gen, devide_theta, normalize_func, theta_bound, device, alpha=1, p_scale=10000):
+                    loss_l_gen, devide_theta, normalize_func, device, alpha=1, p_scale=10000):
     mp_generator.train()
     model.eval()
 
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_gen.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=alpha, p_scale=p_scale)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, device, alpha=alpha, p_scale=p_scale)
     outputs = model(normalize_func(inputs))
     loss = -criterion(outputs, targets)
     loss.backward()
@@ -55,20 +55,20 @@ def train_gen_batch(inputs, targets, model, mp_generator, optimizer_gen, criteri
 
 
 def test_gen_batch(inputs, targets, model, mp_generator,
-                   optimizer_gen, devide_theta, normalize_func, theta_bound, device, alpha=1, p_scale=10000):
+                   optimizer_gen, devide_theta, normalize_func, device, alpha=1, p_scale=10000):
     mp_generator.eval()
     model.eval()
 
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_gen.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=alpha, p_scale=p_scale)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, device, alpha=alpha, p_scale=p_scale)
     outputs = model(normalize_func(inputs))
     _, predicted = outputs.max(1)
     return (~predicted.eq(targets)).sum().item(), targets.size(0), inputs
 
 
 def gdpa(dataloader, dataloader_val, model, mp_generator, optimizer_gen, scheduler, criterion,
-          epochs, devide_theta, alpha, normalize_func, writer, theta_bound, device):
+          epochs, devide_theta, alpha, normalize_func, writer, device):
     for epoch in range(epochs):
         start_time = time.time()
         print('epoch: {}'.format(epoch))
@@ -81,8 +81,7 @@ def gdpa(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedul
                                                                         mp_generator,
                                                                         optimizer_gen, criterion,
                                                                         loss_l_gen, devide_theta, normalize_func,
-                                                                        theta_bound, device, alpha=alpha,
-                                                                        p_scale=10000)
+                                                                        device, alpha=alpha, p_scale=10000)
             correct_gen += correct_batch
             total_gen += total_batch
         # training log
@@ -99,8 +98,7 @@ def gdpa(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedul
             correct_batch, total_batch, final_ims_gen = test_gen_batch(inputs, targets, model,
                                                                        mp_generator,
                                                                        optimizer_gen, devide_theta, normalize_func,
-                                                                       theta_bound, device, alpha=alpha,
-                                                                       p_scale=10000)
+                                                                       device, alpha=alpha, p_scale=10000)
             correct_gen2 += correct_batch
             total_gen2 += total_batch
         # testing log
@@ -161,11 +159,9 @@ def main():
     ], lr=0.1, betas=(0.5, 0.9))
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer_gen, step_size=50, gamma=0.2)
     criterion = torch.nn.CrossEntropyLoss()
-    # bound for theta, this bound keep the patch inside images
-    theta_bound = 1 - (args.patch_size / 224.0)
     # train and test
     gdpa(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, scheduler,
-          criterion, para['epochs'], para['beta'], para['alpha'], normalize_func, writer, theta_bound, args.device)
+          criterion, para['epochs'], para['beta'], para['alpha'], normalize_func, writer, args.device)
 
 
 if __name__ == '__main__':

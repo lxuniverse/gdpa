@@ -31,8 +31,8 @@ def scale_pattern(mask, p_scale=10000):
     return mask_s
 
 
-def scale_theta(mask, theta_div, theta_bound):
-    mask_s = torch.tanh(mask / theta_div) * theta_bound
+def scale_theta(mask, theta_div):
+    mask_s = torch.tanh(mask / theta_div) * 0.8
     return mask_s
 
 

@@ -12,13 +12,13 @@ import argparse
 
 def train_gen_batch(inputs, targets, model, mp_generator,
                     optimizer_gen, criterion,
-                    loss_l_gen, devide_theta, theta_bound, device, alpha=1, p_scale=10000):
+                    loss_l_gen, devide_theta, device, alpha=1, p_scale=10000):
     mp_generator.train()
     model.eval()
 
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_gen.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=alpha, p_scale=p_scale)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, device, alpha=alpha, p_scale=p_scale)
     outputs = model(normalize_vggface(inputs[:, [2, 1, 0], :, :]))
     loss = -criterion(outputs, targets)
     loss.backward()
@@ -35,7 +35,7 @@ def train_clf_batch(inputs, targets, model, mp_generator,
     model.train()
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_clf.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, device)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, device)
     outputs = model(normalize_vggface(inputs))
     loss = criterion(outputs, targets)
     loss.backward()
@@ -46,7 +46,7 @@ def train_clf_batch(inputs, targets, model, mp_generator,
 
 
 def gdpa_at(dataloader, dataloader_val, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
-            devide_theta, writer, save_freq, patch_size, theta_bound, device, enable_testing):
+            devide_theta, writer, save_freq, patch_size, device, enable_testing):
     for epoch in range(epochs):
         start_time = time.time()
         print('epoch: {}'.format(epoch))
@@ -61,14 +61,14 @@ def gdpa_at(dataloader, dataloader_val, model, mp_generator, optimizer_gen, opti
             correct_batch, total_batch, final_ims_gen = train_gen_batch(inputs, targets, model,
                                                                         mp_generator,
                                                                         optimizer_gen, criterion,
-                                                                        loss_l_gen, devide_theta, theta_bound, device)
+                                                                        loss_l_gen, devide_theta, device)
             correct_gen += correct_batch
             total_gen += total_batch
             # train clf
             correct_batch, total_batch, final_ims_clf = train_clf_batch(inputs, targets, model,
                                                                         mp_generator,
                                                                         optimizer_clf, criterion,
-                                                                        loss_l_clf, devide_theta, theta_bound, device)
+                                                                        loss_l_clf, devide_theta, device)
             correct_clf += correct_batch
             total_clf += total_batch
 
@@ -149,10 +149,9 @@ def main():
     ], lr=0.1, betas=(0.5, 0.9))
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer_gen, step_size=50, gamma=0.2)
     criterion = torch.nn.CrossEntropyLoss()
-    theta_bound = 1 - (args.patch_size / 224.0)
     # main logic
     gdpa_at(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
-            criterion, args.epochs, args.beta, writer, args.save_freq, args.patch_size, theta_bound,
+            criterion, args.epochs, args.beta, writer, args.save_freq, args.patch_size,
             args.device, args.enable_testing)
 
 
