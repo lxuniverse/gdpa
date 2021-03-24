@@ -1,12 +1,11 @@
 import torch
 import torchvision
-import torch.nn as nn
 import time
 from tqdm import tqdm
 import numpy as np
 from data import load_vggface_unnormalized, normalize_vggface
 from models import load_model_vggface, load_generator
-from utils import get_log_writer
+from utils import get_log_writer, attack_batch_pgd
 from gdpa import perturb_image
 import argparse
 
@@ -44,23 +43,6 @@ def train_clf_batch(inputs, targets, model, mp_generator,
     loss_l_clf.append(loss.cpu().detach().numpy())
     _, predicted = outputs.max(1)
     return (~predicted.eq(targets)).sum().item(), targets.size(0), inputs
-
-
-def attack_batch_pgd(inputs, targets, model, pgd_iter=20, alpha=1, epsilon=16):
-    model.eval()
-    device = 'cuda'
-    inputs, targets = inputs.to(device), targets.to(device)
-
-    delta = torch.zeros_like(inputs, requires_grad=True)
-    for t in range(pgd_iter):
-        loss = nn.CrossEntropyLoss()(model((inputs + delta)[:, [2, 1, 0], :, :]), targets)
-        loss.backward()
-        delta.data = (delta + inputs.shape[0] * alpha * delta.grad.data).clamp(-epsilon / 255, epsilon / 255)
-        delta.grad.zero_()
-    perturbed_input = (inputs + delta.detach()).clamp(0, 1)
-    outputs = model(normalize_vggface(perturbed_input))
-    _, predicted = outputs.max(1)
-    return (~predicted.eq(targets)).sum().item(), targets.size(0), perturbed_input
 
 
 def gdpa_at(dataloader, dataloader_val, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
