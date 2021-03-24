@@ -100,7 +100,8 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
             correct_batch, total_batch, final_ims_gen = train_gen_batch(inputs, targets, model,
                                                                         mp_generator,
                                                                         optimizer_gen, criterion,
-                                                                        loss_l_gen, devide_theta, normalize_func, theta_bound, alpha=alpha,
+                                                                        loss_l_gen, devide_theta, normalize_func,
+                                                                        theta_bound, alpha=alpha,
                                                                         p_scale=10000)
             correct_gen += correct_batch
             total_gen += total_batch
@@ -117,7 +118,8 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
         for batch_idx, (inputs, targets) in enumerate(tqdm(dataloader_val)):
             correct_batch, total_batch, final_ims_gen = test_gen_batch(inputs, targets, model,
                                                                        mp_generator,
-                                                                       optimizer_gen, devide_theta, normalize_func, theta_bound, alpha=alpha,
+                                                                       optimizer_gen, devide_theta, normalize_func,
+                                                                       theta_bound, alpha=alpha,
                                                                        p_scale=10000)
             correct_gen2 += correct_batch
             total_gen2 += total_batch
