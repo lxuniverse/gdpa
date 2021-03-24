@@ -20,9 +20,9 @@ http://www.image-net.org/ for ImageNet
 
 1. Train GDPA for patch attack:
 ```
-python 
+python gdpa.py --size 32 --alpha 1 --beta 3000 --dataset imagenet --data_path [folder of imagenet]
 ```
 2. Train a robust model with GDPA-AT
 ```
-python 
+python gdpa_at.py --data_path [folder of vggface]
 ```
