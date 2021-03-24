@@ -16,8 +16,6 @@ or
 
 http://www.image-net.org/ for ImageNet
 
-## Quick Start
-
 1. Train GDPA for patch attack:
 ```
 python gdpa.py --size 32 --alpha 1 --beta 3000 --dataset imagenet --data_path [folder of imagenet]
