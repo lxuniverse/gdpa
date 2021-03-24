@@ -9,7 +9,7 @@ import torchfile
 
 class ResnetGenerator_small_patch(nn.Module):
 
-    def __init__(self, patch_size, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False,
+    def __init__(self, patch_size, input_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False,
                  n_blocks=6, padding_type='reflect'):
         self.patch_size = patch_size
         assert (n_blocks >= 0)
@@ -57,9 +57,9 @@ class ResnetGenerator_small_patch(nn.Module):
         return 1, patch, loc
 
 
-def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02,
+def define_G(input_nc, output_nc, ngf, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02,
              gpu_ids=[]):
-    norm_layer = get_norm_layer(norm_type=norm)
+    norm_layer = get_norm_layer()
     net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6)
     return init_net(net, init_type, init_gain, gpu_ids)
 
@@ -164,17 +164,16 @@ class ResnetBlock(nn.Module):
         return out
 
 
-def load_generator(patch_size, input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False,
-                   init_type='normal', init_gain=0.02, gpu_ids=[]):
-    norm_layer = get_norm_layer(norm_type=norm)
+def load_generator(patch_size, input_nc, ngf, use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
+    norm_layer = get_norm_layer()
 
-    net = ResnetGenerator_small_patch(patch_size, input_nc, output_nc, ngf, norm_layer=norm_layer,
+    net = ResnetGenerator_small_patch(patch_size, input_nc, ngf, norm_layer=norm_layer,
                                       use_dropout=use_dropout, n_blocks=6)
 
     return init_net(net, init_type, init_gain, gpu_ids)
 
 
-def get_norm_layer(norm_type='instance'):
+def get_norm_layer():
     norm_layer = functools.partial(nn.BatchNorm2d, affine=True, track_running_stats=True)
     return norm_layer
 

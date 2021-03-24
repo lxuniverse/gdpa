@@ -19,7 +19,6 @@ def move_m_p(aff_theta, pattern_s, device, alpha=1):
     end = start + pattern_s.size()[2]
     image_with_patch[:, :, start:end, start:end] = pattern_s
     mask_with_patch[:, :, start:end, start:end] = alpha
-
     rot_theta = torch.tensor([[1.0, 0.0], [0.0, 1.0]]).unsqueeze(0).to(device).repeat(bs, 1, 1)
     theta_batch = torch.cat((rot_theta, aff_theta.unsqueeze(2)), 2)
     grid = F.affine_grid(theta_batch, image_with_patch.size(), align_corners=True)
@@ -30,19 +29,15 @@ def move_m_p(aff_theta, pattern_s, device, alpha=1):
 
 def perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=1, p_scale=10000):
     mask_generated, pattern_generated, aff_theta = mp_generator(inputs)
-
     aff_theta = scale_theta(aff_theta, devide_theta, theta_bound)
     pattern_s = scale_pattern(pattern_generated, p_scale=p_scale)
-
     mask_s, pattern_s = move_m_p(aff_theta, pattern_s, device, alpha=alpha)
-
     inputs = inputs * (1 - mask_s) + pattern_s * mask_s
     inputs = inputs.clamp(0, 1)
     return inputs
 
 
-def train_gen_batch(inputs, targets, model, mp_generator,
-                    optimizer_gen, criterion,
+def train_gen_batch(inputs, targets, model, mp_generator, optimizer_gen, criterion,
                     loss_l_gen, devide_theta, normalize_func, theta_bound, device, alpha=1, p_scale=10000):
     mp_generator.train()
     model.eval()
@@ -108,12 +103,14 @@ def gdpa(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedul
                                                                        p_scale=10000)
             correct_gen2 += correct_batch
             total_gen2 += total_batch
+        # testing log
         asr = correct_gen2 / total_gen2
         writer.add_scalar('test_gen/asr', asr, epoch)
         final_ims_gen = torchvision.utils.make_grid(final_ims_gen)
         writer.add_image('final_im_test/{}'.format(epoch), final_ims_gen, epoch)
         # scheduler
         scheduler.step()
+        # time
         end_time = time.time()
         print(end_time - start_time)
 
@@ -157,14 +154,14 @@ def main():
     model_train = model_train.to(args.device)
     model_train.eval()
     # gen model
-    mp_generator = load_generator(para['patch_size'], 3, 1, 64, 'resnet_6blocks').to(args.device)
+    mp_generator = load_generator(para['patch_size'], 3, 64).to(args.device)
     # training setting
     optimizer_gen = torch.optim.Adam([
         {'params': mp_generator.parameters(), 'lr': para['lr_gen']}
     ], lr=0.1, betas=(0.5, 0.9))
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer_gen, step_size=50, gamma=0.2)
     criterion = torch.nn.CrossEntropyLoss()
-    # bound for theta
+    # bound for theta, this bound keep the patch inside images
     theta_bound = 1 - (args.patch_size / 224.0)
     # train and test
     gdpa(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, scheduler,
