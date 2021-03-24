@@ -72,7 +72,7 @@ def test_gen_batch(inputs, targets, model, mp_generator,
     return (~predicted.eq(targets)).sum().item(), targets.size(0), inputs
 
 
-def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, scheduler, criterion,
+def gdpa(dataloader, dataloader_val, model, mp_generator, optimizer_gen, scheduler, criterion,
           epochs, devide_theta, alpha, normalize_func, writer, theta_bound, device):
     for epoch in range(epochs):
         start_time = time.time()
@@ -167,7 +167,7 @@ def main():
     # bound for theta
     theta_bound = 1 - (args.patch_size / 224.0)
     # train and test
-    train(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, scheduler,
+    gdpa(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, scheduler,
           criterion, para['epochs'], para['beta'], para['alpha'], normalize_func, writer, theta_bound, args.device)
 
 
