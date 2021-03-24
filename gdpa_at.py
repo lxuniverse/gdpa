@@ -82,7 +82,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default='/home/xli62/uap/phattacks/glass/Data')
     args = parser.parse_args()
-
     epochs = 1000
     lr_gen = 0.0001
     lr_clf = 0.0001
