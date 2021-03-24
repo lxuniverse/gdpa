@@ -86,21 +86,22 @@ def main():
     parser.add_argument('--lr_clf', type=float, default=0.0001)
     parser.add_argument('--beta', type=int, default=3000)
     parser.add_argument('--save_freq', type=int, default=50)
-    parser.add_argument('--size', type=int, default=70)
+    parser.add_argument('--patch_size', type=int, default=70)
+    parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--vgg_model_path', type=str,
                         default='/home/xli62/uap/phattacks/glass/donemodel/new_ori_model.pt')
     args = parser.parse_args()
     para = {'exp': 'exp_at', 'device': 'cuda', 'lr_gen': args.lr_gen,
-            'lr_clf': args.lr_clf, 'epochs': args.epochs, 'size': args.size}
+            'lr_clf': args.lr_clf, 'epochs': args.epochs, 'size': args.patch_size}
     writer, base_dir = get_log_writer(para)
 
-    dataloader, dataloader_val = load_vggface_unnormalized(32, args.data_path)
+    dataloader, dataloader_val = load_vggface_unnormalized(args.batch_size, args.data_path)
 
     model_train = load_model_vggface(args.model_path)
     model_train = model_train.to(para['device'])
     model_train.eval()
 
-    mp_generator = load_generator(args.size, 3, 1, 64, 'resnet_6blocks').to(para['device'])
+    mp_generator = load_generator(args.patch_size, 3, 1, 64, 'resnet_6blocks').to(para['device'])
 
     optimizer_gen = torch.optim.Adam([
         {'params': mp_generator.parameters(), 'lr': args.lr_gen}

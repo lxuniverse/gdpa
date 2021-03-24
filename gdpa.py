@@ -138,7 +138,7 @@ def get_para():
     # input parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp', type=str, default='gdpa')
-    parser.add_argument('--size', type=int, default=32)
+    parser.add_argument('--patch_size', type=int, default=32)
     parser.add_argument('--alpha', type=float, default=1)
     parser.add_argument('--beta', type=int, default=3000)
     parser.add_argument('--dataset', type=str, default='vggface')
@@ -147,6 +147,7 @@ def get_para():
                         default='/home/xli62/uap/phattacks/glass/donemodel/new_ori_model.pt')
     parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--lr_gen', type=float, default=0.0005)
+    parser.add_argument('--batch_size', type=int, default=32)
     args = parser.parse_args()
     return args
 
@@ -154,14 +155,14 @@ def get_para():
 def main():
     args = get_para()
     para = {'exp': args.exp, 'device': 'cuda', 'beta': args.beta, 'lr_gen': args.lr_gen,
-            'epochs': args.epochs, 'alpha': args.alpha, 'patch_size': args.size, 'dataset': args.dataset}
+            'epochs': args.epochs, 'alpha': args.alpha, 'patch_size': args.patch_size, 'dataset': args.dataset}
     writer, base_dir = get_log_writer(para)
     # data
     if para['dataset'] == 'vggface':
-        dataloader, dataloader_val = load_vggface_unnormalized(32, args.data_path)
+        dataloader, dataloader_val = load_vggface_unnormalized(args.batch_size, args.data_path)
         normalize_func = normalize_vggface
     elif para['dataset'] == 'imagenet':
-        dataloader, dataloader_val = load_imagenet_unnormalize(32, args.data_path)
+        dataloader, dataloader_val = load_imagenet_unnormalize(args.batch_size, args.data_path)
         normalize_func = normalize_imagenet
     # clf model
     if para['dataset'] == 'vggface':
