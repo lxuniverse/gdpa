@@ -1,10 +1,8 @@
-import torchvision.models as models
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
 import functools
-import torchfile
 
 
 class ResnetGenerator_small_patch(nn.Module):
@@ -241,22 +239,6 @@ class VGG_16_vggface(nn.Module):
         self.fc6 = nn.Linear(512 * 7 * 7, 1024)
         self.fc7 = nn.Linear(1024, 1024)
         self.fc8 = nn.Linear(1024, 10)
-
-    def load_weights(self, path="./vgg_face_torch/VGG_FACE.t7"):
-
-        model = torchfile.load(path)
-        counter = 1
-        block = 1
-        for i, layer in enumerate(model.modules):
-            if layer.weight is not None:
-                if block <= 5:
-                    self_layer = getattr(self, "conv_%d_%d" % (block, counter))
-                    counter += 1
-                    if counter > self.block_size[block - 1]:
-                        counter = 1
-                        block += 1
-                    self_layer.weight.data[...] = torch.tensor(layer.weight).view_as(self_layer.weight)[...]
-                    self_layer.bias.data[...] = torch.tensor(layer.bias).view_as(self_layer.bias)[...]
 
     def forward(self, x):
         x = F.relu(self.conv_1_1(x))
