@@ -19,7 +19,7 @@ http://www.image-net.org/
 
 ---
 
-1. Train GDPA for patch attack:
+1. Dynamic patch attack with GDPA:
 ```
 python gdpa.py --dataset [imagenet|vggface] --data_path [FOLDER_NAME] --vgg_model_path [MODEL_PATH]
 
@@ -33,7 +33,7 @@ optional arguments:
   --batch_size            batch size
   --device                cuda or cpu
 ```
-2. Train a robust model with GDPA-AT:
+2. Adversarial training with GDPA-AT:
 ```
 python gdpa_at.py --data_path [FOLDER_NAME] --vgg_model_path [MODEL_PATH] 
 
@@ -48,7 +48,7 @@ optional arguments:
   --device                cuda or cpu
   --enable_testing        testing during training
 ```
-3. Visulize logging ASRs and Images:
+3. Visulize ASRs and adversarial images with tensorboard:
 ```
 tensorboard --logdir logs/exp/gdpa/
 ```
