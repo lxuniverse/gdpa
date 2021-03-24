@@ -5,7 +5,8 @@ This reposityory contains the PyTorch implementation of "Generative Dynamic Patc
 [comment]: # (<img src="https://github.com/lxuniverse/gdpa/blob/main/pics/gdpa_arch.png" width="600" class="center">)
 
 ## Requirements
-PyTorch >= 0.4.0
+PyTorch 
+TensorBoard
 
 ## Quick Start
 Download the data and CE trained model of VGGFace from:
