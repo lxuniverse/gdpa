@@ -1,5 +1,6 @@
 import torch
 import torchvision
+import torch.nn as nn
 import time
 from tqdm import tqdm
 import numpy as np
@@ -45,7 +46,24 @@ def train_clf_batch(inputs, targets, model, mp_generator,
     return (~predicted.eq(targets)).sum().item(), targets.size(0), inputs
 
 
-def gdpa_at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
+def attack_batch_pgd(inputs, targets, model, pgd_iter=20, alpha=1, epsilon=16):
+    model.eval()
+    device = 'cuda'
+    inputs, targets = inputs.to(device), targets.to(device)
+
+    delta = torch.zeros_like(inputs, requires_grad=True)
+    for t in range(pgd_iter):
+        loss = nn.CrossEntropyLoss()(model((inputs + delta)[:, [2, 1, 0], :, :]), targets)
+        loss.backward()
+        delta.data = (delta + inputs.shape[0] * alpha * delta.grad.data).clamp(-epsilon / 255, epsilon / 255)
+        delta.grad.zero_()
+    perturbed_input = (inputs + delta.detach()).clamp(0, 1)
+    outputs = model(normalize_vggface(perturbed_input))
+    _, predicted = outputs.max(1)
+    return (~predicted.eq(targets)).sum().item(), targets.size(0), perturbed_input
+
+
+def gdpa_at(dataloader, dataloader_val, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
             devide_theta, writer, save_freq, patch_size, theta_bound, device):
     for epoch in range(epochs):
         start_time = time.time()
@@ -87,6 +105,19 @@ def gdpa_at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, sched
         writer.add_scalar('train_clf/asr', asr, epoch)
         final_ims_clf = torchvision.utils.make_grid(final_ims_clf)
         writer.add_image('final_im_clf/{}'.format(epoch), final_ims_clf, epoch)
+        # testing
+        correct_pgd = 0
+        total_pgd = 0
+        for batch_idx, (inputs, targets) in enumerate(tqdm(dataloader_val)):
+            correct_batch, total_batch, final_ims_pgd = attack_batch_pgd(inputs, targets, model,
+                                                                         pgd_iter=300, alpha=20, epsilon=16)
+            correct_pgd += correct_batch
+            total_pgd += total_batch
+        # testing log
+        asr = correct_pgd / total_pgd
+        writer.add_scalar('test_pgd/asr', asr, epoch)
+        final_ims_pgd = torchvision.utils.make_grid(final_ims_pgd)
+        writer.add_image('final_im_pgd/{}'.format(epoch), final_ims_pgd, epoch)
         # save model
         if (epoch + 1) % save_freq == 0:
             torch.save(model.state_dict(), 'at_model/at_classifier_size_{}_epoch_{}.pt'.format(patch_size, epoch))
@@ -136,7 +167,7 @@ def main():
     criterion = torch.nn.CrossEntropyLoss()
     theta_bound = 1 - (args.patch_size / 224.0)
     # main logic
-    gdpa_at(dataloader, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
+    gdpa_at(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
             criterion, args.epochs, args.beta, writer, args.save_freq, args.patch_size, theta_bound, args.device)
 
 
