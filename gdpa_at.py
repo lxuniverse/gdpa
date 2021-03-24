@@ -30,7 +30,7 @@ def train_gen_batch(inputs, targets, model, mp_generator,
 
 def train_clf_batch(inputs, targets, model, mp_generator,
                     optimizer_clf, criterion,
-                    loss_l_clf, devide_theta, theta_bound, device):
+                    loss_l_clf, devide_theta, device):
     mp_generator.eval()
     model.train()
     inputs, targets = inputs.to(device), targets.to(device)
