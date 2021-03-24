@@ -10,6 +10,7 @@ from models import load_generator, load_model_vggface
 from data import load_vggface_unnormalized, normalize_vggface, load_imagenet_unnormalize, normalize_imagenet
 import torchvision.models as models
 
+
 def scale_pattern(mask, p_scale=10000):
     if p_scale == 1:
         mask_s = torch.tanh(mask) / 2 + 0.5
@@ -141,6 +142,7 @@ def get_para():
     parser.add_argument('--alpha', type=float, default=1)
     parser.add_argument('--beta', type=int, default=3000)
     parser.add_argument('--dataset', type=str, default='vggface')
+    parser.add_argument('--data_path', type=str, default='/home/xli62/uap/phattacks/glass/Data')
     args = parser.parse_args()
     # fixed parameters
     epochs = 50
@@ -149,7 +151,7 @@ def get_para():
     # para
     para = {'exp': args.exp, 'device': 'cuda', 'beta': args.beta, 'lr_gen': lr_gen,
             'epochs': epochs, 'alpha': args.alpha, 'patch_size': args.size, 'dataset': args.dataset,
-            'imagenet_model': imagenet_model}
+            'data_path': args.data_path, 'imagenet_model': imagenet_model}
     print(para)
     return para
 
@@ -159,10 +161,10 @@ def main():
     writer, base_dir = get_log_writer(para)
     # data
     if para['dataset'] == 'vggface':
-        dataloader, dataloader_val = load_vggface_unnormalized(32)
+        dataloader, dataloader_val = load_vggface_unnormalized(32, para['data_path'])
         normalize_func = normalize_vggface
     elif para['dataset'] == 'imagenet':
-        dataloader, dataloader_val = load_imagenet_unnormalize(32)
+        dataloader, dataloader_val = load_imagenet_unnormalize(32, para['data_path'])
         normalize_func = normalize_imagenet
     # clf model
     if para['dataset'] == 'vggface':

@@ -7,7 +7,7 @@ from data import load_vggface_unnormalized
 from models import load_model_vggface, load_generator
 from utils import get_log_writer
 from gdpa import perturb_image, normalize_vggface, train_gen_batch
-
+import argparse
 
 def train_clf_batch(inputs, targets, model, mp_generator,
                     optimizer_clf, criterion,
@@ -79,6 +79,10 @@ def at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler,
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_path', type=str, default='/home/xli62/uap/phattacks/glass/Data')
+    args = parser.parse_args()
+
     epochs = 1000
     lr_gen = 0.0001
     lr_clf = 0.0001
@@ -90,7 +94,7 @@ def main():
             'lr_clf': lr_clf, 'epochs': epochs, 'glass_iters': glass_iters, 'size': size}
     writer, base_dir = get_log_writer(para)
 
-    dataloader, dataloader_val = load_vggface_unnormalized(32)
+    dataloader, dataloader_val = load_vggface_unnormalized(32, args.data_path)
 
     model_path = '/home/xli62/uap/phattacks/glass/donemodel/new_ori_model.pt'
     model_train = load_model_vggface(model_path)

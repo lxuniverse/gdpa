@@ -23,9 +23,8 @@ def normalize_vggface(x):
     return (x - data_mean_vggface) / data_std_vggface
 
 
-def load_imagenet_unnormalize(bs):
+def load_imagenet_unnormalize(bs, path):
     num_train_im = 10000
-    path = '/shared/imagenet'
     dataset_train = datasets.ImageFolder(path + '/train', transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
@@ -57,7 +56,7 @@ def load_imagenet_unnormalize(bs):
     return dataloader_train, dataloader_val
 
 
-def load_vggface_unnormalized(bs):
+def load_vggface_unnormalized(bs, data_path):
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize(size=(224, 224)),
@@ -73,7 +72,7 @@ def load_vggface_unnormalized(bs):
         ]),
     }
 
-    data_dir = '/home/xli62/uap/phattacks/glass/Data'  # change this if the data is in different loaction
+    data_dir = data_path  # change this if the data is in different loaction
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                               data_transforms[x])
                       for x in ['train', 'val', 'test']}
