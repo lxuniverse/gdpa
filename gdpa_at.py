@@ -12,13 +12,13 @@ import argparse
 
 def train_gen_batch(inputs, targets, model, mp_generator,
                     optimizer_gen, criterion,
-                    loss_l_gen, devide_theta, device, alpha=1, p_scale=10000):
+                    loss_l_gen, devide_theta, theta_bound, device, alpha=1, p_scale=10000):
     mp_generator.train()
     model.eval()
 
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_gen.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta, device, alpha=alpha, p_scale=p_scale)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, device, alpha=alpha, p_scale=p_scale)
     outputs = model(normalize_vggface(inputs[:, [2, 1, 0], :, :]))
     loss = -criterion(outputs, targets)
     loss.backward()
@@ -30,13 +30,13 @@ def train_gen_batch(inputs, targets, model, mp_generator,
 
 def train_clf_batch(inputs, targets, model, mp_generator,
                     optimizer_clf, criterion,
-                    loss_l_clf, devide_theta, device):
+                    loss_l_clf, devide_theta, theta_bound, device):
     mp_generator.eval()
     model.train()
 
     inputs, targets = inputs.to(device), targets.to(device)
     optimizer_clf.zero_grad()
-    inputs = perturb_image(inputs, mp_generator, devide_theta)
+    inputs = perturb_image(inputs, mp_generator, devide_theta, theta_bound, device)
     outputs = model(normalize_vggface(inputs))
     loss = criterion(outputs, targets)
     loss.backward()
@@ -47,7 +47,7 @@ def train_clf_batch(inputs, targets, model, mp_generator,
 
 
 def at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
-       devide_theta, writer, save_freq, size, device):
+       devide_theta, writer, save_freq, size, theta_bound, device):
     for epoch in range(epochs):
         start_time = time.time()
         print('epoch: {}'.format(epoch))
@@ -63,14 +63,14 @@ def at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler,
             correct_batch, total_batch, final_ims_gen = train_gen_batch(inputs, targets, model,
                                                                         mp_generator,
                                                                         optimizer_gen, criterion,
-                                                                        loss_l_gen, devide_theta, device)
+                                                                        loss_l_gen, devide_theta, theta_bound, device)
             correct_gen += correct_batch
             total_gen += total_batch
 
             correct_batch, total_batch, final_ims_clf = train_clf_batch(inputs, targets, model,
                                                                         mp_generator,
                                                                         optimizer_clf, criterion,
-                                                                        loss_l_clf, devide_theta, device)
+                                                                        loss_l_clf, devide_theta, theta_bound, device)
             correct_clf += correct_batch
             total_clf += total_batch
 
@@ -116,13 +116,13 @@ def get_args():
 
 def main():
     args = get_args()
-    para = {'exp': 'exp_at', 'lr_gen': args.lr_gen,
-            'lr_clf': args.lr_clf, 'epochs': args.epochs, 'size': args.patch_size}
+    para = {'exp': 'exp_at', 'lr_gen': args.lr_gen, 'lr_clf': args.lr_clf,
+            'epochs': args.epochs, 'size': args.patch_size}
     writer, base_dir = get_log_writer(para)
 
     dataloader, dataloader_val = load_vggface_unnormalized(args.batch_size, args.data_path)
 
-    model_train = load_model_vggface(args.model_path)
+    model_train = load_model_vggface(args.vgg_model_path)
     model_train = model_train.to(args.device)
     model_train.eval()
 
@@ -139,8 +139,9 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer_gen, step_size=50, gamma=0.2)
     criterion = torch.nn.CrossEntropyLoss()
 
+    theta_bound = 1 - (args.patch_size / 224.0)
     at(dataloader, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
-       criterion, args.epochs, args.beta, writer, args.save_freq, args.size, args.device)
+       criterion, args.epochs, args.beta, writer, args.save_freq, args.patch_size, theta_bound, args.device)
 
 
 if __name__ == '__main__':

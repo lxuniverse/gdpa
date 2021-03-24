@@ -178,7 +178,7 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer_gen, step_size=50, gamma=0.2)
     criterion = torch.nn.CrossEntropyLoss()
     # bound for theta
-    theta_bound = 1 - (para['patch_size'] / 224.0)
+    theta_bound = 1 - (args.patch_size / 224.0)
     # train and test
     train(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, scheduler,
           criterion, para['epochs'], para['beta'], para['alpha'], normalize_func, writer, theta_bound, args.device)
