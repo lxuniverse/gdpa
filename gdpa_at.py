@@ -9,6 +9,7 @@ from utils import get_log_writer
 from gdpa import perturb_image, normalize_vggface, train_gen_batch
 import argparse
 
+
 def train_clf_batch(inputs, targets, model, mp_generator,
                     optimizer_clf, criterion,
                     loss_l_clf, devide_theta):
@@ -78,7 +79,7 @@ def at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler,
         print(end_time - start_time)
 
 
-def main():
+def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default='/home/xli62/uap/phattacks/glass/Data')
     parser.add_argument('--epochs', type=int, default=1000)
@@ -91,6 +92,11 @@ def main():
     parser.add_argument('--vgg_model_path', type=str,
                         default='/home/xli62/uap/phattacks/glass/donemodel/new_ori_model.pt')
     args = parser.parse_args()
+    return args
+
+
+def main():
+    args = get_args()
     para = {'exp': 'exp_at', 'device': 'cuda', 'lr_gen': args.lr_gen,
             'lr_clf': args.lr_clf, 'epochs': args.epochs, 'size': args.patch_size}
     writer, base_dir = get_log_writer(para)

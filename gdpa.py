@@ -134,7 +134,7 @@ def train(dataloader, dataloader_val, model, mp_generator, optimizer_gen, schedu
         print(end_time - start_time)
 
 
-def get_para():
+def get_args():
     # input parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp', type=str, default='gdpa')
@@ -153,7 +153,7 @@ def get_para():
 
 
 def main():
-    args = get_para()
+    args = get_args()
     para = {'exp': args.exp, 'device': 'cuda', 'beta': args.beta, 'lr_gen': args.lr_gen,
             'epochs': args.epochs, 'alpha': args.alpha, 'patch_size': args.patch_size, 'dataset': args.dataset}
     writer, base_dir = get_log_writer(para)
