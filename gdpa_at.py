@@ -111,6 +111,7 @@ def gdpa_at(dataloader, dataloader_val, model, mp_generator, optimizer_gen, opti
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--exp', type=str, default='gdpa_at')
     parser.add_argument('--data_path', type=str, default='/home/xli62/uap/phattacks/glass/Data')
     parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('--lr_gen', type=float, default=0.0001)
@@ -129,7 +130,7 @@ def get_args():
 
 def main():
     args = get_args()
-    para = {'exp': 'exp_at', 'lr_gen': args.lr_gen, 'lr_clf': args.lr_clf,
+    para = {'exp': args.exp_at, 'lr_gen': args.lr_gen, 'lr_clf': args.lr_clf,
             'epochs': args.epochs, 'size': args.patch_size}
     writer, base_dir = get_log_writer(para)
     # data
