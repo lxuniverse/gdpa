@@ -130,7 +130,7 @@ def get_args():
 
 def main():
     args = get_args()
-    para = {'exp': args.exp_at, 'lr_gen': args.lr_gen, 'lr_clf': args.lr_clf,
+    para = {'exp': args.exp, 'lr_gen': args.lr_gen, 'lr_clf': args.lr_clf,
             'epochs': args.epochs, 'size': args.patch_size}
     writer, base_dir = get_log_writer(para)
     # data
