@@ -8,13 +8,13 @@ This reposityory contains the PyTorch implementation of "Generative Dynamic Patc
 PyTorch >= 0.4.0
 
 ## Quick Start
-Download the data from:
+Download the data and CE trained model of VGGFace from:
 
-https://github.com/tongwu2020/phattacks for VGGFace
+https://github.com/tongwu2020/phattacks
 
-or
+Download the data of ImageNet from:
 
-http://www.image-net.org/ for ImageNet
+http://www.image-net.org/ 
 
 ---
 
