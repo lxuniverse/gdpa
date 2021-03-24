@@ -64,7 +64,7 @@ def attack_batch_pgd(inputs, targets, model, pgd_iter=20, alpha=1, epsilon=16):
 
 
 def gdpa_at(dataloader, dataloader_val, model, mp_generator, optimizer_gen, optimizer_clf, scheduler, criterion, epochs,
-            devide_theta, writer, save_freq, patch_size, theta_bound, device):
+            devide_theta, writer, save_freq, patch_size, theta_bound, device, enable_testing):
     for epoch in range(epochs):
         start_time = time.time()
         print('epoch: {}'.format(epoch))
@@ -105,19 +105,20 @@ def gdpa_at(dataloader, dataloader_val, model, mp_generator, optimizer_gen, opti
         writer.add_scalar('train_clf/asr', asr, epoch)
         final_ims_clf = torchvision.utils.make_grid(final_ims_clf)
         writer.add_image('final_im_clf/{}'.format(epoch), final_ims_clf, epoch)
-        # testing
-        correct_pgd = 0
-        total_pgd = 0
-        for batch_idx, (inputs, targets) in enumerate(tqdm(dataloader_val)):
-            correct_batch, total_batch, final_ims_pgd = attack_batch_pgd(inputs, targets, model,
-                                                                         pgd_iter=300, alpha=20, epsilon=16)
-            correct_pgd += correct_batch
-            total_pgd += total_batch
-        # testing log
-        asr = correct_pgd / total_pgd
-        writer.add_scalar('test_pgd/asr', asr, epoch)
-        final_ims_pgd = torchvision.utils.make_grid(final_ims_pgd)
-        writer.add_image('final_im_pgd/{}'.format(epoch), final_ims_pgd, epoch)
+        if enable_testing:
+            # testing
+            correct_pgd = 0
+            total_pgd = 0
+            for batch_idx, (inputs, targets) in enumerate(tqdm(dataloader_val)):
+                correct_batch, total_batch, final_ims_pgd = attack_batch_pgd(inputs, targets, model,
+                                                                             pgd_iter=300, alpha=20, epsilon=16)
+                correct_pgd += correct_batch
+                total_pgd += total_batch
+            # testing log
+            asr = correct_pgd / total_pgd
+            writer.add_scalar('test_pgd/asr', asr, epoch)
+            final_ims_pgd = torchvision.utils.make_grid(final_ims_pgd)
+            writer.add_image('final_im_pgd/{}'.format(epoch), final_ims_pgd, epoch)
         # save model
         if (epoch + 1) % save_freq == 0:
             torch.save(model.state_dict(), 'at_model/at_classifier_size_{}_epoch_{}.pt'.format(patch_size, epoch))
@@ -138,6 +139,7 @@ def get_args():
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--vgg_model_path', type=str,
                         default='/home/xli62/uap/phattacks/glass/donemodel/new_ori_model.pt')
+    parser.add_argument('--enable_testing', dest='enable_testing', action='store_true')
     parser.add_argument('--device', type=str, default='cuda')
     args = parser.parse_args()
     return args
@@ -168,7 +170,8 @@ def main():
     theta_bound = 1 - (args.patch_size / 224.0)
     # main logic
     gdpa_at(dataloader, dataloader_val, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
-            criterion, args.epochs, args.beta, writer, args.save_freq, args.patch_size, theta_bound, args.device)
+            criterion, args.epochs, args.beta, writer, args.save_freq, args.patch_size, theta_bound,
+            args.device, args.enable_testing)
 
 
 if __name__ == '__main__':
