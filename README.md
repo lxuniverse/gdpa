@@ -30,7 +30,6 @@ python gdpa_at.py --data_path [FOLDER_NAME]
 ```
 tensorboard --logdir logs/exp/gdpa/
 ```
-or
 ```
 tensorboard --logdir logs/exp/gdpa_at/
 ```
