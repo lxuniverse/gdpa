@@ -7,7 +7,9 @@ This reposityory contains the PyTorch implementation of "Generative Dynamic Patc
 ## Requirements
 PyTorch >= 1.6.0
 
-TensorBoard >= 2.2.1
+TensorBoard == 2.2.1
+
+tqdm == 4.56.0
 
 ## Quick Start
 Download the data and CE trained model of VGGFace from:
