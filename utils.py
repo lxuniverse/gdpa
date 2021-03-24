@@ -1,6 +1,20 @@
 import os
 import shutil
 from torch.utils.tensorboard import SummaryWriter
+import torch
+
+
+def scale_pattern(mask, p_scale=10000):
+    if p_scale == 1:
+        mask_s = torch.tanh(mask) / 2 + 0.5
+    if p_scale == 10000:
+        mask_s = mask
+    return mask_s
+
+
+def scale_theta(mask, theta_div, theta_bound):
+    mask_s = torch.tanh(mask / theta_div) * theta_bound
+    return mask_s
 
 
 def para2dir(para):

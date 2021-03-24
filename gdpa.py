@@ -5,23 +5,10 @@ import time
 from tqdm import tqdm
 import numpy as np
 import argparse
-from utils import get_log_writer
+from utils import get_log_writer, scale_theta, scale_pattern
 from models import load_generator, load_model_vggface
 from data import load_vggface_unnormalized, normalize_vggface, load_imagenet_unnormalize, normalize_imagenet
 import torchvision.models as models
-
-
-def scale_pattern(mask, p_scale=10000):
-    if p_scale == 1:
-        mask_s = torch.tanh(mask) / 2 + 0.5
-    if p_scale == 10000:
-        mask_s = mask
-    return mask_s
-
-
-def scale_theta(mask, theta_div, theta_bound):
-    mask_s = torch.tanh(mask / theta_div) * theta_bound
-    return mask_s
 
 
 def move_m_p(aff_theta, pattern_s, device, alpha=1):
