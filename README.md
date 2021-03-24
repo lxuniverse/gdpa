@@ -21,11 +21,17 @@ http://www.image-net.org/
 
 1. Train GDPA for patch attack:
 ```
-python gdpa.py --patch_size 32 --alpha 1 --beta 3000 --dataset [imagenet|vggface] --data_path [FOLDER_NAME] --vgg_model_path [MODEL_PATH]
+python gdpa.py --dataset [imagenet|vggface] --data_path [FOLDER_NAME] --vgg_model_path [MODEL_PATH]
+optional arguments:
+  --patch_size          
+  --alpha
+  --beta
 ```
 2. Train a robust model with GDPA-AT:
 ```
-python gdpa_at.py --data_path [FOLDER_NAME] --vgg_model_path [MODEL_PATH] --enable_testing
+python gdpa_at.py --data_path [FOLDER_NAME] --vgg_model_path [MODEL_PATH] 
+optional arguments:
+  --enable_testing     
 ```
 3. Visulize logging ASRs and Images:
 ```
