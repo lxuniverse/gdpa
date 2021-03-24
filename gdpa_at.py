@@ -81,39 +81,40 @@ def at(dataloader, model, mp_generator, optimizer_gen, optimizer_clf, scheduler,
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, default='/home/xli62/uap/phattacks/glass/Data')
+    parser.add_argument('--epochs', type=int, default=1000)
+    parser.add_argument('--lr_gen', type=float, default=0.0001)
+    parser.add_argument('--lr_clf', type=float, default=0.0001)
+    parser.add_argument('--beta', type=int, default=3000)
+    parser.add_argument('--save_freq', type=int, default=50)
+    parser.add_argument('--size', type=int, default=70)
+    parser.add_argument('--vgg_model_path', type=str,
+                        default='/home/xli62/uap/phattacks/glass/donemodel/new_ori_model.pt')
     args = parser.parse_args()
-    epochs = 1000
-    lr_gen = 0.0001
-    lr_clf = 0.0001
-    beta = 3000
-    save_freq = 50
-    size = 70
-    para = {'exp': 'exp_at', 'device': 'cuda', 'lr_gen': lr_gen,
-            'lr_clf': lr_clf, 'epochs': epochs, 'size': size}
+    para = {'exp': 'exp_at', 'device': 'cuda', 'lr_gen': args.lr_gen,
+            'lr_clf': args.lr_clf, 'epochs': args.epochs, 'size': args.size}
     writer, base_dir = get_log_writer(para)
 
     dataloader, dataloader_val = load_vggface_unnormalized(32, args.data_path)
 
-    model_path = '/home/xli62/uap/phattacks/glass/donemodel/new_ori_model.pt'
-    model_train = load_model_vggface(model_path)
+    model_train = load_model_vggface(args.model_path)
     model_train = model_train.to(para['device'])
     model_train.eval()
 
-    mp_generator = load_generator(size, 3, 1, 64, 'resnet_6blocks').to(para['device'])
+    mp_generator = load_generator(args.size, 3, 1, 64, 'resnet_6blocks').to(para['device'])
 
     optimizer_gen = torch.optim.Adam([
-        {'params': mp_generator.parameters(), 'lr': lr_gen}
+        {'params': mp_generator.parameters(), 'lr': args.lr_gen}
     ], lr=0.1, betas=(0.5, 0.9))
 
     optimizer_clf = torch.optim.Adam([
-        {'params': model_train.parameters(), 'lr': lr_clf}
+        {'params': model_train.parameters(), 'lr': args.lr_clf}
     ], lr=0.1, betas=(0.5, 0.9))
 
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer_gen, step_size=50, gamma=0.2)
     criterion = torch.nn.CrossEntropyLoss()
 
     at(dataloader, model_train, mp_generator, optimizer_gen, optimizer_clf, scheduler,
-       criterion, epochs, beta, writer, save_freq, size)
+       criterion, args.epochs, args.beta, writer, args.save_freq, args.size)
 
 
 if __name__ == '__main__':
