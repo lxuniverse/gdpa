@@ -14,7 +14,7 @@ tqdm == 4.56.0
 ## Quick Start
 Download the data and CE trained model of VGGFace from:
 
-https://github.com/tongwu2020/phattacks
+https://github.com/tongwu2020/phattacks/releases/tag/Data%26Model
 
 Download the data of ImageNet from:
 
