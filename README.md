@@ -60,3 +60,15 @@ tensorboard --logdir logs/exp/gdpa/
 ```
 tensorboard --logdir logs/exp/gdpa_at/
 ```
+
+## Citation
+
+If you find this repository useful, please cite our paper:
+```
+@article{xiang2021gdpa,
+    title={Generative Dynamic Patch Attack},
+    author={Xiang Li and Shihao Ji},
+    journal={British Machine Vision Conference (BMVC)},
+    year={2021}
+}
+```
